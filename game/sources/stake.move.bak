@@ -1,0 +1,89 @@
+module 0x1::TokenModule {
+    use std::vector;
+    use std::option;
+
+    // 代币池的结构体
+    struct Pool has key {
+        total_staked: u64,
+        fees_collected: u64,
+        last_fee_index: u64,
+    }
+
+    // 用户的持仓信息
+    struct Stake has key {
+        amount: u64,
+        fee_index: u64,
+        pending_fees: u64,
+    }
+
+    // 全局状态
+    struct GlobalState has key {
+        pool: Pool,
+        stakes: table::Table<address, Stake>,
+    }
+
+    // 初始化函数，创建一个新的代币池
+    public fun init_pool(owner: &signer) {
+        let pool = Pool {
+            total_staked: 0,
+            fees_collected: 0,
+            last_fee_index: 0,
+        };
+        let stakes = table::Table::new<address, Stake>();
+        move_to(owner, GlobalState { pool, stakes });
+    }
+
+    // 用户存入代币池
+    public fun stake_tokens(user: &signer, amount: u64) {
+        let global_state = borrow_global_mut<GlobalState>(address_of(user));
+        let pool = &mut global_state.pool;
+        let stakes = &mut global_state.stakes;
+
+        let user_addr = address_of(user);
+        let stake = option::borrow_mut_or_insert_with(
+            table::borrow_mut(stakes, &user_addr),
+            || Stake { amount: 0, fee_index: pool.last_fee_index, pending_fees: 0 },
+        );
+
+        // 更新用户的持仓
+        stake.amount += amount;
+        pool.total_staked += amount;
+    }
+
+    // 计算用户的未结算费用
+    fun calculate_pending_fees(stake: &Stake, pool: &Pool): u64 {
+        let new_fees = pool.fees_collected - stake.fee_index;
+        (stake.amount * new_fees) / pool.total_staked
+    }
+
+    // 用户提取费用
+    public fun claim_fees(user: &signer) {
+        let global_state = borrow_global_mut<GlobalState>(address_of(user));
+        let pool = &mut global_state.pool;
+        let stakes = &mut global_state.stakes;
+
+        let user_addr = address_of(user);
+        let stake = table::borrow_mut(stakes, &user_addr);
+
+        let pending_fees = calculate_pending_fees(stake, pool);
+        stake.pending_fees += pending_fees;
+        stake.fee_index = pool.fees_collected;
+
+        // 用户提取费用逻辑
+        // 例如，将费用发送到用户的账户
+    }
+
+    // 交易函数，收取费用并更新池状态
+    public fun transfer_with_fee(sender: &signer, receiver: address, amount: u64) {
+        let fee = amount / 20; // 5% 费用
+        let net_amount = amount - fee;
+
+        // 执行转账逻辑，将净额发送给接收者
+        // 这里假设有一个transfer函数
+
+        // 更新池的费用
+        let global_state = borrow_global_mut<GlobalState>(address_of(sender));
+        let pool = &mut global_state.pool;
+        pool.fees_collected += fee;
+    }
+}
