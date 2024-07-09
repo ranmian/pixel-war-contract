@@ -81,45 +81,29 @@ module pvp::event {
         leader_stake_amount: u64,
     }
 
-    public struct ApplyAllianceEvent has copy, drop {
-        source_index: u64,
-        source_token_name: String,
-        source_token_symbol: ascii::String,
-        target_index: u64,
-        target_token_name: String,
-        target_token_symbol: ascii::String,
+    public struct JoinAllianceEvent has copy, drop {
         sender: address,
+        source_index: u64,
+        source_pixel_name: String,
+        source_pixel_symbol: ascii::String,
+        source_pixel_type: String,
+        target_index: u64,
+        target_pixel_name: String,
+        target_pixel_symbol: ascii::String,
+        target_pixel_type: String,
+        join_fee: u64,
     }
 
-    public struct AcceptAllianceEvent has copy, drop {
-        source_index: u64,
-        source_token_name: String,
-        source_token_symbol: ascii::String,
-        target_index: u64,
-        target_token_name: String,
-        target_token_symbol: ascii::String,
+    public struct LeaveAllianceEvent has copy, drop {
         sender: address,
-        fee: u64,
-    }
-
-    public struct RefuseAllianceEvent has copy, drop {
         source_index: u64,
-        source_token_name: String,
-        source_token_symbol: ascii::String,
+        source_pixel_name: String,
+        source_pixel_symbol: ascii::String,
+        source_pixel_type: String,
         target_index: u64,
-        target_token_name: String,
-        target_token_symbol: ascii::String,
-        sender: address,
-    }
-
-    public struct BreakAllianceEvent has copy, drop {
-        source_index: u64,
-        source_token_name: String,
-        source_token_symbol: ascii::String,
-        target_index: u64,
-        target_token_name: String,
-        target_token_symbol: ascii::String,
-        sender: address,
+        target_pixel_name: String,
+        target_pixel_symbol: ascii::String,
+        target_pixel_type: String,
     }
 
     public struct DestroyPixelEvent has copy, drop {
@@ -301,85 +285,53 @@ module pvp::event {
         })
     }
 
-    public fun apply_alliance_event (
-        source_index: u64,
-        source_token_name: String,
-        source_token_symbol: ascii::String,
-        target_index: u64,
-        target_token_name: String,
-        target_token_symbol: ascii::String,
+    public fun join_alliance_event (
         sender: address,
+        source_index: u64,
+        source_pixel_name: String,
+        source_pixel_symbol: ascii::String,
+        source_pixel_type: String,
+        target_index: u64,
+        target_pixel_name: String,
+        target_pixel_symbol: ascii::String,
+        target_pixel_type: String,
+        join_fee: u64,
     ) {
-        emit(ApplyAllianceEvent{
-            source_index,
-            source_token_name,
-            source_token_symbol,
-            target_index,
-            target_token_name,
-            target_token_symbol,
+        emit(JoinAllianceEvent{
             sender,
+            source_index,
+            source_pixel_name,
+            source_pixel_symbol,
+            source_pixel_type,
+            target_index,
+            target_pixel_name,
+            target_pixel_symbol,
+            target_pixel_type,
+            join_fee,
         })
     }
 
-    public fun accept_alliance_event (
-        source_index: u64,
-        source_token_name: String,
-        source_token_symbol: ascii::String,
-        target_index: u64,
-        target_token_name: String,
-        target_token_symbol: ascii::String,
+    public fun leave_alliance_event (
         sender: address,
-        fee: u64,
-    ) {
-        emit(AcceptAllianceEvent {
-            source_index,
-            source_token_name,
-            source_token_symbol,
-            target_index,
-            target_token_name,
-            target_token_symbol,
-            sender,
-            fee,
-        })
-    }
-
-    public fun refuse_alliance_event (
         source_index: u64,
-        source_token_name: String,
-        source_token_symbol: ascii::String,
+        source_pixel_name: String,
+        source_pixel_symbol: ascii::String,
+        source_pixel_type: String,
         target_index: u64,
-        target_token_name: String,
-        target_token_symbol: ascii::String,
-        sender: address,
+        target_pixel_name: String,
+        target_pixel_symbol: ascii::String,
+        target_pixel_type: String,
     ) {
-        emit(RefuseAllianceEvent {
-            source_index,
-            source_token_name,
-            source_token_symbol,
-            target_index,
-            target_token_name,
-            target_token_symbol,
+        emit(LeaveAllianceEvent {
             sender,
-        })
-    }
-
-    public fun break_alliance_event (
-        source_index: u64,
-        source_token_name: String,
-        source_token_symbol: ascii::String,
-        target_index: u64,
-        target_token_name: String,
-        target_token_symbol: ascii::String,
-        sender: address,
-    ) {
-        emit(BreakAllianceEvent {
             source_index,
-            source_token_name,
-            source_token_symbol,
+            source_pixel_name,
+            source_pixel_symbol,
+            source_pixel_type,
             target_index,
-            target_token_name,
-            target_token_symbol,
-            sender,
+            target_pixel_name,
+            target_pixel_symbol,
+            target_pixel_type,
         })
     }
 

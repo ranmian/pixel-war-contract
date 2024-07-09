@@ -158,66 +158,30 @@ module pvp::game {
         game_global.status = constants::game_round_status_playing();
     }
 
-    public fun apply_alliance<X, Y>(
+    public fun join_alliance<X, Y>(
         game_global: &GameGlobal,
         pixel_global: &mut PixelGlobal,
-        target_index: u64,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
         check_game_time(game_global, clock);
 
-        pixel::apply_alliance<X, Y>(
+        pixel::join_alliance<X, Y>(
             pixel_global,
-            target_index,
             ctx,
         );
     }
 
-    public fun accept_alliance<X, Y>(
+    public fun leave_alliance<X, Y>(
         game_global: &GameGlobal,
         pixel_global: &mut PixelGlobal,
-        apply_index: u64,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
         check_game_time(game_global, clock);
 
-        pixel::accept_alliance<X, Y>(
+        pixel::leave_alliance<X, Y>(
             pixel_global,
-            apply_index,
-            ctx,
-        );
-    }
-
-    public fun refuse_alliance<T>(
-        game_global: &mut GameGlobal,
-        pixel_global: &mut PixelGlobal,
-        target_index: u64,
-        clock: &Clock,
-        ctx: &mut TxContext,
-    ) {
-        check_game_time(game_global, clock);
-
-        pixel::refuse_alliance<T>(
-            pixel_global,
-            target_index,
-            ctx,
-        );
-    }
-
-    public fun break_alliance<X, Y>(
-        game_global: &GameGlobal,
-        pixel_global: &mut PixelGlobal,
-        index: u64,
-        clock: &Clock,
-        ctx: &mut TxContext,
-    ) {
-        check_game_time(game_global, clock);
-
-        pixel::break_alliance<X, Y>(
-            pixel_global,
-            index,
             ctx,
         );
     }

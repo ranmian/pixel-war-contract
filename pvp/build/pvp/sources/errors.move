@@ -27,7 +27,7 @@ module pvp::errors {
     const E_INVALID_UNSTAKE_AMOUNT: u64 = 1019;
     const E_INSUFFICIENT_STAKE_FEE: u64 = 1020;
     const E_YOU_ARE_NOT_LEADER: u64 = 1021;
-    const E_APPLIED_ALLIANCE: u64 = 1022;
+    const E_HAVE_JOINED_ALLIANCE: u64 = 1022;
 
     public fun invalid_version(): u64 {
         E_INVALID_VERSION
@@ -141,7 +141,7 @@ module pvp::errors {
         E_YOU_ARE_NOT_LEADER
     }
 
-    public fun applied_alliance(): u64 {
-        E_APPLIED_ALLIANCE
+    public fun have_joined_alliance(): u64 {
+        E_HAVE_JOINED_ALLIANCE
     }
 }

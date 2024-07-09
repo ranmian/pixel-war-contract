@@ -56,7 +56,6 @@ module pvp::pixel {
         stake_address_list: vector<address>,
         leader_address: Option<address>,
         leader_stake_amount: u64,
-        apply_alliance_list: VecMap<u64, String>,
         alliance_list: VecMap<u64, String>,
         decorate_address: Option<address>,
     }
@@ -172,7 +171,6 @@ module pvp::pixel {
             stake_address_list: vector::empty<address>(),
             leader_address: option::none(),
             leader_stake_amount: 0,
-            apply_alliance_list: vec_map::empty(),
             alliance_list: vec_map::empty(),
             decorate_address: option::none(),
         };
@@ -894,60 +892,32 @@ module pvp::pixel {
         )
     }
 
-    public(package) fun apply_alliance<X, Y>(
+    public(package) fun join_alliance<X, Y>(
         pixel_global: &mut PixelGlobal,
-        target_index: u64,
         ctx: &TxContext,
     ) {
         check_leader<X>(pixel_global, ctx);
 
         let source_pixel_type = utils::get_pixel_type<X>();
+        let target_pixel_type = utils::get_pixel_type<Y>();
 
         assert!(
             is_pixel_listed<X>(pixel_global, source_pixel_type) == true,
             errors::pixel_not_exist(),
         );
 
-        let (source_pixel_index, source_token_name, source_token_symbol) = {
-            let source_pixel = bag::borrow<String, Pixel<X>>(&pixel_global.pixel_list, source_pixel_type);
-            (source_pixel.index, source_pixel.name, source_pixel.symbol)
-        };
-
-        let target_pixel = get_mut_pixel<Y>(pixel_global);
-
         assert!(
-            vec_map::contains(&target_pixel.apply_alliance_list, &source_pixel_index) == false,
-            errors::applied_alliance(),
+            is_pixel_listed<Y>(pixel_global, target_pixel_type) == true,
+            errors::pixel_not_exist(),
         );
-
-        vec_map::insert(
-            &mut target_pixel.apply_alliance_list,
-            source_pixel_index,
-            source_pixel_type,
-        );
-
-        event::apply_alliance_event(
-            source_pixel_index,
-            source_token_name,
-            source_token_symbol,
-            target_index,
-            target_pixel.name,
-            target_pixel.symbol,
-            tx_context::sender(ctx),
-        )
-    }
-
-    public(package) fun accept_alliance<X, Y>(
-        pixel_global: &mut PixelGlobal,
-        apply_index: u64,
-        ctx: &TxContext,
-    ) {
-        check_leader<X>(pixel_global, ctx);
 
         let alliance_fee_rate = pixel_global.alliance_fee_rate;
 
-        let alliance_fee = {
-            let target_pixel = get_mut_pixel<Y>(pixel_global);
+        let (
+            alliance_fee,
+            alliance_fee_amount
+        ) = {
+            let target_pixel = bag::borrow_mut<String, Pixel<Y>>(&mut pixel_global.pixel_list, target_pixel_type);
 
             let amount = (math::mul_div(
                 (balance::value(&target_pixel.sui_balance) as u256),
@@ -955,52 +925,142 @@ module pvp::pixel {
                 (constants::rate_size() as u256),
             ) as u64);
 
-            balance::split(&mut target_pixel.sui_balance, amount)
+            (
+                balance::split(&mut target_pixel.sui_balance, amount),
+                amount,
+            )
         };
 
-        let source_pixel = get_mut_pixel<X>(pixel_global);
-        if (vec_map::contains(&source_pixel.apply_alliance_list, &apply_index)) {
-            vec_map::remove<u64, String>(&mut source_pixel.apply_alliance_list, &apply_index);
+        let target_pixel_index= {
+            let target_pixel = bag::borrow<String, Pixel<Y>>(&pixel_global.pixel_list, target_pixel_type);
+            target_pixel.index
         };
-        if (!vec_map::contains(&source_pixel.alliance_list, &apply_index)) {
-            vec_map::insert<u64, String>(
-                &mut source_pixel.alliance_list,
-                apply_index,
-                utils::get_pixel_type<Y>()
+
+        let (
+            source_pixel_index,
+            source_pixel_name,
+            source_pixel_symbol
+        ) = {
+            let source_pixel = bag::borrow_mut<String, Pixel<X>>(&mut pixel_global.pixel_list, source_pixel_type);
+            assert!(
+                vec_map::contains(&source_pixel.alliance_list, &target_pixel_index) == false,
+                errors::have_joined_alliance(),
             );
+            vec_map::insert(
+                &mut source_pixel.alliance_list,
+                target_pixel_index,
+                target_pixel_type,
+            );
+            (
+                source_pixel.index,
+                source_pixel.name,
+                source_pixel.symbol
+            )
         };
 
-        balance::join(
-            &mut source_pixel.sui_balance,
-            alliance_fee,
-        );
-    }
-
-    public(package) fun refuse_alliance<T>(
-        pixel_global: &mut PixelGlobal,
-        target_index: u64,
-        ctx: &TxContext,
-    ) {
-        check_leader<T>(pixel_global, ctx);
-
-        let pixel = get_mut_pixel<T>(pixel_global);
-
-        if (vec_map::contains(&pixel.apply_alliance_list, &target_index)) {
-            vec_map::remove<u64, String>(&mut pixel.apply_alliance_list, &target_index);
+        let (
+            target_pixel_name,
+            target_pixel_symbol
+        ) = {
+            let target_pixel = bag::borrow_mut<String, Pixel<Y>>(&mut pixel_global.pixel_list, source_pixel_type);
+            assert!(
+                vec_map::contains(&target_pixel.alliance_list, &source_pixel_index) == false,
+                errors::have_joined_alliance(),
+            );
+            vec_map::insert(
+                &mut target_pixel.alliance_list,
+                source_pixel_index,
+                source_pixel_type,
+            );
+            balance::join(
+                &mut target_pixel.sui_balance,
+                alliance_fee,
+            );
+            (
+                target_pixel.name,
+                target_pixel.symbol
+            )
         };
+
+        event::join_alliance_event(
+            tx_context::sender(ctx),
+            source_pixel_index,
+            source_pixel_name,
+            source_pixel_symbol,
+            source_pixel_type,
+            target_pixel_index,
+            target_pixel_name,
+            target_pixel_symbol,
+            target_pixel_type,
+            alliance_fee_amount,
+        )
     }
 
-    public(package) fun break_alliance<X, Y>(
+    public(package) fun leave_alliance<X, Y>(
         pixel_global: &mut PixelGlobal,
-        index: u64,
         ctx: &TxContext,
     ) {
         check_leader<X>(pixel_global, ctx);
 
-        let target_pixel = get_mut_pixel<Y>(pixel_global);
-        if (!vec_map::contains(&target_pixel.alliance_list, &index)) {
-            vec_map::remove<u64, String>(&mut target_pixel.alliance_list, &index);
+        let source_pixel_type = utils::get_pixel_type<X>();
+        let target_pixel_type = utils::get_pixel_type<Y>();
+
+        assert!(
+            is_pixel_listed<X>(pixel_global, source_pixel_type) == true,
+            errors::pixel_not_exist(),
+        );
+
+        assert!(
+            is_pixel_listed<Y>(pixel_global, target_pixel_type) == true,
+            errors::pixel_not_exist(),
+        );
+
+        let target_pixel_index= {
+            let target_pixel = bag::borrow<String, Pixel<Y>>(&pixel_global.pixel_list, target_pixel_type);
+            target_pixel.index
         };
+
+        let (
+            source_pixel_index,
+            source_pixel_name,
+            source_pixel_symbol
+        ) = {
+            let source_pixel = bag::borrow_mut<String, Pixel<X>>(&mut pixel_global.pixel_list, source_pixel_type);
+            if (!vec_map::contains(&source_pixel.alliance_list, &target_pixel_index)) {
+                vec_map::remove<u64, String>(&mut source_pixel.alliance_list, &target_pixel_index);
+            };
+            (
+                source_pixel.index,
+                source_pixel.name,
+                source_pixel.symbol
+            )
+        };
+
+        let (
+            target_pixel_name,
+            target_pixel_symbol
+        ) = {
+            let target_pixel = bag::borrow_mut<String, Pixel<Y>>(&mut pixel_global.pixel_list, target_pixel_type);
+            if (!vec_map::contains(&target_pixel.alliance_list, &source_pixel_index)) {
+                vec_map::remove<u64, String>(&mut target_pixel.alliance_list, &source_pixel_index);
+            };
+            (
+                target_pixel.name,
+                target_pixel.symbol
+            )
+        };
+
+        event::leave_alliance_event(
+            tx_context::sender(ctx),
+            source_pixel_index,
+            source_pixel_name,
+            source_pixel_symbol,
+            source_pixel_type,
+            target_pixel_index,
+            target_pixel_name,
+            target_pixel_symbol,
+            target_pixel_type,
+        );
     }
 
     public fun get_pixel_leader<T>(
